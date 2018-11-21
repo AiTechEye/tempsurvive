@@ -44,7 +44,7 @@ tempsurvive.new=function(player)
 		temp=0,
 		heat_resistance=40,
 		coldness_resistance=-10,
-		full_resistance=minetest.check_player_privs(name, {no_temperature=true})
+		full_resistance=minetest.check_player_privs(name, {no_temperature=true}),
 	}
 end
 
@@ -222,6 +222,14 @@ minetest.register_on_joinplayer(function(player)
 	if tempsurvive.player[name].full_resistance then return end
 	tempsurvive.player[name].bar=player:hud_add(tempsurvive.bar)
 	tempsurvive.player[name].screen=player:hud_add(tempsurvive.screen)
+end)
+
+minetest.register_on_respawnplayer(function(player)
+	local t=tempsurvive.player[player:get_player_name()]
+	t.temp=0
+	player:hud_change(t.bar, "text", tempsurvive.bar.text .."^[colorize:#00ff00cc")
+	player:hud_change(t.bar, "number", t.temp)
+	player:hud_change(t.screen, "text", tempsurvive.screen.text)
 end)
 
 minetest.register_on_leaveplayer(function(player)
