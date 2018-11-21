@@ -28,12 +28,12 @@ tempsurvive={
 		alignment = {x=1, y=1},
 	},
 	nodes={
-		["snowy"]={add=-1},
-		["default:ice"]={add=-2},
-		["water"]={add=-10},
-		["default:torch"]={add=5},
-		["igniter"]={add=15},
-		["default:furnace_active"]={add=10},
+		["snowy"]={add=-1,rad=2},
+		["default:ice"]={add=-2,rad=3},
+		["water"]={add=-10,rad=0},
+		["torch"]={add=5,rad=5},
+		["igniter"]={add=15,rad=5},
+		["default:furnace_active"]={add=10,rad=10},
 	}
 }
 
@@ -46,6 +46,7 @@ minetest.after(0.1, function()
 			local group=table.copy(minetest.registered_nodes[i].groups or {})
 			group.tempsurvive=1
 			group.tempsurvive_add=v.add
+			group.tempsurvive_rad=v.rad
 			minetest.override_item(i, {groups=group})
 		end
 	end
@@ -55,6 +56,7 @@ minetest.after(0.1, function()
 				local group=table.copy(v.groups or {})
 				group.tempsurvive=1
 				group.tempsurvive_add=vv.add
+				group.tempsurvive_rad=vv.rad
 				minetest.override_item(i, {groups=group})
 			end
 		end
@@ -93,6 +95,10 @@ end
 
 
 tempsurvive.spread_temperature=function(target_pos,pos,add,rad)
+	local td=vector.distance(target_pos,pos)
+	if td<1 then
+		return add
+	end
 	local jobs={pos}
 	local checked={}
 	while #jobs>0 and #jobs<1000 do
@@ -103,9 +109,13 @@ tempsurvive.spread_temperature=function(target_pos,pos,add,rad)
 				local np={x=p.x+x,y=p.y+y,z=p.z+z}
 				local ta=minetest.pos_to_string(np)
 				local d=vector.distance(pos,np)
-				if d<=rad and not checked[ta] and minetest.get_node(np).name=="air" then
+				local nod=minetest.registered_nodes[minetest.get_node(np).name]
+				if d<=rad and not checked[ta] and nod and not nod.walkable then
+
+--minetest.add_entity(np, "tempsurvive:dot")
+
 					if vector.distance(target_pos,np)<=1 then
-						return add/vector.distance(target_pos,pos)
+						return add/td
 					end
 					checked[ta]=true
 					table.insert(jobs,np)
@@ -118,6 +128,22 @@ tempsurvive.spread_temperature=function(target_pos,pos,add,rad)
 	end
 	return 0
 end
+
+
+minetest.register_entity("tempsurvive:dot",{
+	hp_max = 1,
+	physical = false,
+	collisionbox = {0,0,0,0,0,0},
+	visual = "sprite",
+	visual_size = {x=0.2, y=0.2},
+	textures = {"bubble.png^[colorize:#0000ff"},
+	on_step = function(self, dtime)
+		self.timer=self.timer+dtime
+		if self.timer<0.5 then return self end
+		self.object:remove()
+	end,
+	timer=0,
+})
 
 tempsurvive.get_bio_temperature=function(pos)
 	if pos.y<-50 then return 0 end
@@ -150,23 +176,25 @@ minetest.register_globalstep(function(dtime)
 		return
 	end
 	for _,player in ipairs(minetest.get_connected_players()) do
+
 		local ptemp=tempsurvive.player[player:get_player_name()]
 		if not ptemp then return end
 		local pos=player:get_pos()
 		local temp=tempsurvive.get_bio_temperature(pos)
-		local a=minetest.find_nodes_in_area({x=pos.x-2, y=pos.y-2, z=pos.z-2}, {x=pos.x+2, y=pos.y+2, z=pos.z+2}, {"group:tempsurvive"})
-		local n=50
+
+		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
 
 		for i,no in pairs(a) do
-			local ca=tempsurvive.exposed(pos,no,minetest.get_item_group(minetest.get_node(no).name,"tempsurvive_add"))
-			temp=temp+ca
-			if ca~=0 then
-				n=n-1
-				if n<1 then break end
-			end
+			local name=minetest.get_node(no).name
+			temp=temp+tempsurvive.spread_temperature(
+				pos,
+				no,
+				minetest.get_item_group(name,"tempsurvive_add"),
+				minetest.get_item_group(name,"tempsurvive_rad")
+			)
 		end
 
-		ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*0.001)
+		ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*0.01)
 
 		if ptemp.temp<ptemp.coldness_resistance then
 			player:punch(player,1+math.floor((ptemp.temp-ptemp.coldness_resistance)*-0.1),{full_punch_interval=1,damage_groups={fleshy=1}})
@@ -175,9 +203,8 @@ minetest.register_globalstep(function(dtime)
 		end
 
 
-
 		local pt=math.floor(math.abs(ptemp.temp))
---print("temp, ptemp",temp,ptemp.temp)
+print("temp, ptemp",temp,ptemp.temp)
 --print("% heat",(pt/math.abs(ptemp.heat_resistance))*20)
 --print("% cold",(pt/math.abs(ptemp.coldness_resistance))*20)
 
@@ -236,4 +263,45 @@ end)
 
 
 
+minetest.register_node("tempsurvive:thermometer", {
+	description = "Thermometer",
+	tiles = {"tempsurvive_thermometer.png"},
+	inventory_image="tempsurvive_thermometer_item.png",
+	wield_image="tempsurvive_thermometer_item.png",
+	groups = {dig_immediate=3},
+	drawtype="nodebox",
+	paramtype="light",
+	paramtype2="facedir",
+	walkable=false,
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.1, -0.25, 0.43, 0.1, 0.25, 0.5} --{-0.06, -0.2, 0.43, 0.06, 0.2, 0.5}
+		}
+	},
+	on_construct = function(pos)
+		local meta = minetest.get_meta(pos)
+		meta:set_string("infotext", math.floor(tempsurvive.get_bio_temperature(pos)*10)*0.1)
+		minetest.get_node_timer(pos):start(2)
+	end,
+	on_timer = function (pos, elapsed)
+		local meta=minetest.get_meta(pos)
 
+
+		local temp=tempsurvive.get_bio_temperature(pos)
+
+		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
+
+		for i,no in pairs(a) do
+			local name=minetest.get_node(no).name
+			temp=temp+tempsurvive.spread_temperature(
+				pos,
+				no,
+				minetest.get_item_group(name,"tempsurvive_add"),
+				minetest.get_item_group(name,"tempsurvive_rad")
+			)
+		end
+		meta:set_string("infotext", math.floor(temp*10)*0.1)
+		return true
+	end,
+})
