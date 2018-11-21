@@ -111,9 +111,6 @@ tempsurvive.spread_temperature=function(target_pos,pos,add,rad)
 				local d=vector.distance(pos,np)
 				local nod=minetest.registered_nodes[minetest.get_node(np).name]
 				if d<=rad and not checked[ta] and nod and not nod.walkable then
-
---minetest.add_entity(np, "tempsurvive:dot")
-
 					if vector.distance(target_pos,np)<=1 then
 						return add/td
 					end
@@ -128,22 +125,6 @@ tempsurvive.spread_temperature=function(target_pos,pos,add,rad)
 	end
 	return 0
 end
-
-
-minetest.register_entity("tempsurvive:dot",{
-	hp_max = 1,
-	physical = false,
-	collisionbox = {0,0,0,0,0,0},
-	visual = "sprite",
-	visual_size = {x=0.2, y=0.2},
-	textures = {"bubble.png^[colorize:#0000ff"},
-	on_step = function(self, dtime)
-		self.timer=self.timer+dtime
-		if self.timer<0.5 then return self end
-		self.object:remove()
-	end,
-	timer=0,
-})
 
 tempsurvive.get_bio_temperature=function(pos)
 	if pos.y<-50 then return 0 end
@@ -202,12 +183,7 @@ minetest.register_globalstep(function(dtime)
 			player:punch(player,1+math.floor((ptemp.temp-ptemp.heat_resistance)*0.5),{full_punch_interval=1,damage_groups={fleshy=1}})
 		end
 
-
 		local pt=math.floor(math.abs(ptemp.temp))
-print("temp, ptemp",temp,ptemp.temp)
---print("% heat",(pt/math.abs(ptemp.heat_resistance))*20)
---print("% cold",(pt/math.abs(ptemp.coldness_resistance))*20)
-
 
 		if ptemp.temp<0 and pt<=ptemp.coldness_resistance*-1 then
 			local t=math.floor(pt/math.abs(ptemp.coldness_resistance)*15)
@@ -236,38 +212,28 @@ end
 minetest.register_on_joinplayer(function(player)
 	tempsurvive.new(player)
 	tempsurvive.player[player:get_player_name()].bar=player:hud_add(tempsurvive.bar)
-
-
-
 	tempsurvive.player[player:get_player_name()].screen=player:hud_add(tempsurvive.screen)
-
-
-if 1 then return end
-	tempsurvive.player[player:get_player_name()].screen=player:hud_add({
-			hud_elem_type = "image",
-			text ="tempsurvive_screen.png",
-			name = "screen",
-			scale = {x=-100, y=-100},
-			position = {x=0, y=0},
-			alignment = {x=1, y=1},
-		})
-
-
-
 end)
---minetest.after(0, function() end,)
+
 minetest.register_on_leaveplayer(function(player)
 	tempsurvive.player[player:get_player_name()]=nil
 end)
 
-
-
+minetest.register_craft({
+	output = "tempsurvive:thermometer",
+	recipe = {
+		{"","default:bronze_ingot",""},
+		{"","default:wood",""},
+		{"","default:glass",""},
+	}
+})
 
 minetest.register_node("tempsurvive:thermometer", {
 	description = "Thermometer",
 	tiles = {"tempsurvive_thermometer.png"},
 	inventory_image="tempsurvive_thermometer_item.png",
 	wield_image="tempsurvive_thermometer_item.png",
+	liquids_pointable=true,
 	groups = {dig_immediate=3},
 	drawtype="nodebox",
 	paramtype="light",
@@ -276,9 +242,24 @@ minetest.register_node("tempsurvive:thermometer", {
 	node_box = {
 		type = "fixed",
 		fixed = {
-			{-0.1, -0.25, 0.43, 0.1, 0.25, 0.5} --{-0.06, -0.2, 0.43, 0.06, 0.2, 0.5}
+			{-0.1, -0.25, 0.43, 0.1, 0.25, 0.5}
 		}
 	},
+	on_use=function(itemstack, user, pointed_thing)
+		local pos=pointed_thing.above or user:get_pos()
+		local temp=tempsurvive.get_bio_temperature(pos)
+		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
+		for i,no in pairs(a) do
+			local name=minetest.get_node(no).name
+			temp=temp+tempsurvive.spread_temperature(
+				pos,
+				no,
+				minetest.get_item_group(name,"tempsurvive_add"),
+				minetest.get_item_group(name,"tempsurvive_rad")
+			)
+		end
+		minetest.chat_send_player(user:get_player_name(), math.floor(temp*10)*0.1)
+	end,
 	on_construct = function(pos)
 		local meta = minetest.get_meta(pos)
 		meta:set_string("infotext", math.floor(tempsurvive.get_bio_temperature(pos)*10)*0.1)
@@ -286,10 +267,7 @@ minetest.register_node("tempsurvive:thermometer", {
 	end,
 	on_timer = function (pos, elapsed)
 		local meta=minetest.get_meta(pos)
-
-
 		local temp=tempsurvive.get_bio_temperature(pos)
-
 		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
 
 		for i,no in pairs(a) do
