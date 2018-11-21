@@ -1,4 +1,5 @@
 tempsurvive={
+	speed=0.01,
 	step_timer=0,
 	step_time=1,
 	player={},
@@ -36,6 +37,21 @@ tempsurvive={
 		["default:furnace_active"]={add=10,rad=10},
 	}
 }
+
+tempsurvive.new=function(player)
+	local name=player:get_player_name()
+	tempsurvive.player[name]={
+		temp=0,
+		heat_resistance=40,
+		coldness_resistance=-10,
+		full_resistance=minetest.check_player_privs(name, {no_temperature=true})
+	}
+end
+
+minetest.register_privilege("no_temperature", {
+	description = "Not affected by temperatures (relogin to take effect)",
+	give_to_singleplayer= false,
+})
 
 minetest.after(0.1, function()
 	local groups_to_change={}
@@ -140,15 +156,6 @@ tempsurvive.get_bio_temperature=function(pos)
 	end
 end
 
-tempsurvive.new=function(player)
-	tempsurvive.player[player:get_player_name()]={
-		temp=0,
-		status=10,
-		heat_resistance=40,
-		coldness_resistance=-10,
-	}
-end
-
 minetest.register_globalstep(function(dtime)
 	if tempsurvive.step_timer>tempsurvive.step_time then
 		tempsurvive.step_timer=0
@@ -159,44 +166,45 @@ minetest.register_globalstep(function(dtime)
 	for _,player in ipairs(minetest.get_connected_players()) do
 
 		local ptemp=tempsurvive.player[player:get_player_name()]
-		if not ptemp then return end
-		local pos=player:get_pos()
-		local temp=tempsurvive.get_bio_temperature(pos)
+		if ptemp and not ptemp.full_resistance then
+			local pos=player:get_pos()
+			local temp=tempsurvive.get_bio_temperature(pos)
 
-		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
+			local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
 
-		for i,no in pairs(a) do
-			local name=minetest.get_node(no).name
-			temp=temp+tempsurvive.spread_temperature(
-				pos,
-				no,
-				minetest.get_item_group(name,"tempsurvive_add"),
-				minetest.get_item_group(name,"tempsurvive_rad")
-			)
-		end
+			for i,no in pairs(a) do
+				local name=minetest.get_node(no).name
+				temp=temp+tempsurvive.spread_temperature(
+					pos,
+					no,
+					minetest.get_item_group(name,"tempsurvive_add"),
+					minetest.get_item_group(name,"tempsurvive_rad")
+				)
+			end
 
-		ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*0.01)
+			ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*tempsurvive.speed)
 
-		if ptemp.temp<ptemp.coldness_resistance then
-			player:punch(player,1+math.floor((ptemp.temp-ptemp.coldness_resistance)*-0.1),{full_punch_interval=1,damage_groups={fleshy=1}})
-		elseif ptemp.temp>ptemp.heat_resistance then
-			player:punch(player,1+math.floor((ptemp.temp-ptemp.heat_resistance)*0.5),{full_punch_interval=1,damage_groups={fleshy=1}})
-		end
+			if ptemp.temp<ptemp.coldness_resistance then
+				player:punch(player,1+math.floor((ptemp.temp-ptemp.coldness_resistance)*-0.1),{full_punch_interval=1,damage_groups={fleshy=1}})
+			elseif ptemp.temp>ptemp.heat_resistance then
+				player:punch(player,1+math.floor((ptemp.temp-ptemp.heat_resistance)*0.5),{full_punch_interval=1,damage_groups={fleshy=1}})
+			end
 
-		local pt=math.floor(math.abs(ptemp.temp))
+			local pt=math.floor(math.abs(ptemp.temp))
 
-		if ptemp.temp<0 and pt<=ptemp.coldness_resistance*-1 then
-			local t=math.floor(pt/math.abs(ptemp.coldness_resistance)*15)
-			local ht=tempsurvive.n2dhex(math.ceil(t/2))
-			player:hud_change(ptemp.bar, "text", tempsurvive.bar.text .."^[colorize:#00" .. tempsurvive.n2dhex(15-t) .. tempsurvive.n2dhex(t) .."cc")
-			player:hud_change(ptemp.bar, "number", 20-math.floor(pt/math.abs(ptemp.coldness_resistance)*20))
-			player:hud_change(ptemp.screen, "text", tempsurvive.screen.text .."^[colorize:#00" .. ht .. tempsurvive.n2dhex(t) ..  ht)
-		elseif ptemp.temp>=0 and pt<=ptemp.heat_resistance then
-			local t=math.floor(pt/math.abs(ptemp.heat_resistance)*15)
-			local ht=tempsurvive.n2dhex(math.ceil(t/2))
-			player:hud_change(ptemp.bar, "text", tempsurvive.bar.text .."^[colorize:#" .. tempsurvive.n2dhex(t) ..tempsurvive.n2dhex(15-t) .."00cc")
-			player:hud_change(ptemp.bar, "number", 20+math.floor(pt/math.abs(ptemp.heat_resistance)*20))
-			player:hud_change(ptemp.screen, "text", tempsurvive.screen.text .."^[colorize:#" .. tempsurvive.n2dhex(t) .. ht .. "00" ..  ht)
+			if ptemp.temp<0 and pt<=ptemp.coldness_resistance*-1 then
+				local t=math.floor(pt/math.abs(ptemp.coldness_resistance)*15)
+				local ht=tempsurvive.n2dhex(math.ceil(t/2))
+				player:hud_change(ptemp.bar, "text", tempsurvive.bar.text .."^[colorize:#00" .. tempsurvive.n2dhex(15-t) .. tempsurvive.n2dhex(t) .."cc")
+				player:hud_change(ptemp.bar, "number", 20-math.floor(pt/math.abs(ptemp.coldness_resistance)*20))
+				player:hud_change(ptemp.screen, "text", tempsurvive.screen.text .."^[colorize:#00" .. ht .. tempsurvive.n2dhex(t) ..  ht)
+			elseif ptemp.temp>=0 and pt<=ptemp.heat_resistance then
+				local t=math.floor(pt/math.abs(ptemp.heat_resistance)*15)
+				local ht=tempsurvive.n2dhex(math.ceil(t/2))
+				player:hud_change(ptemp.bar, "text", tempsurvive.bar.text .."^[colorize:#" .. tempsurvive.n2dhex(t) ..tempsurvive.n2dhex(15-t) .."00cc")
+				player:hud_change(ptemp.bar, "number", 20+math.floor(pt/math.abs(ptemp.heat_resistance)*20))
+				player:hud_change(ptemp.screen, "text", tempsurvive.screen.text .."^[colorize:#" .. tempsurvive.n2dhex(t) .. ht .. "00" ..  ht)
+			end
 		end
 	end
 end)
@@ -208,11 +216,12 @@ tempsurvive.n2dhex=function(n)
 	return a2 .. a2
 end
 
-
 minetest.register_on_joinplayer(function(player)
 	tempsurvive.new(player)
-	tempsurvive.player[player:get_player_name()].bar=player:hud_add(tempsurvive.bar)
-	tempsurvive.player[player:get_player_name()].screen=player:hud_add(tempsurvive.screen)
+	local name=player:get_player_name()
+	if tempsurvive.player[name].full_resistance then return end
+	tempsurvive.player[name].bar=player:hud_add(tempsurvive.bar)
+	tempsurvive.player[name].screen=player:hud_add(tempsurvive.screen)
 end)
 
 minetest.register_on_leaveplayer(function(player)
