@@ -58,7 +58,7 @@ minetest.after(0.1, function()
 	for i,v in pairs(tempsurvive.nodes) do
 		if string.find(i,":")==nil then
 			groups_to_change[i]=v
-		else
+		elseif minetest.registered_nodes[i] then
 			local group=table.copy(minetest.registered_nodes[i].groups or {})
 			group.tempsurvive=1
 			group.tempsurvive_add=v.add
