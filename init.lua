@@ -74,8 +74,12 @@ minetest.after(0.1, function()
 				group.tempsurvive_add=vv.add
 				group.tempsurvive_rad=vv.rad
 				minetest.override_item(i, {groups=group})
+				tempsurvive.nodes[i]={add=vv.add,rad=vv.rad}
 			end
 		end
+	end
+	for ii,vv in pairs(groups_to_change) do
+		tempsurvive.nodes[ii]=nil
 	end
 end)
 
@@ -169,6 +173,11 @@ minetest.register_globalstep(function(dtime)
 		if ptemp and not ptemp.full_resistance then
 			local pos=player:get_pos()
 			local temp=tempsurvive.get_bio_temperature(pos)
+			local itn=player:get_wielded_item():get_name()
+
+			if tempsurvive.nodes[itn] then
+				temp=temp+tempsurvive.nodes[itn].add
+			end
 
 			local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
 
