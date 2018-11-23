@@ -176,7 +176,7 @@ minetest.register_globalstep(function(dtime)
 			local itn=player:get_wielded_item():get_name()
 
 			if tempsurvive.nodes[itn] then
-				temp=temp+tempsurvive.nodes[itn].add
+				temp=temp+tempsurvive.nodes[itn].add*2
 			end
 
 			local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
