@@ -22,6 +22,7 @@ tempsurvive={
 		direction=0,
 		offset={x=-244, y=-88}, --offset={x=-265, y=-88},
 	},
+	clothes={},
 	screen={
 		hud_elem_type = "image",
 		text ="tempsurvive_screen.png",
@@ -42,11 +43,37 @@ tempsurvive.new=function(player)
 	local name=player:get_player_name()
 	tempsurvive.player[name]={
 		temp=0,
+		warming=0,
+		cooling=0,
 		heat_resistance=40,
 		coldness_resistance=-10,
 		full_resistance=minetest.check_player_privs(name, {no_temperature=true}),
 	}
 end
+
+minetest.register_on_joinplayer(function(player)
+	tempsurvive.new(player)
+	local name=player:get_player_name()
+	if tempsurvive.player[name].full_resistance then return end
+	tempsurvive.player[name].bar=player:hud_add(tempsurvive.bar)
+	tempsurvive.player[name].screen=player:hud_add(tempsurvive.screen)
+	player:get_inventory():set_size("clothes",9)
+	minetest.after(0.1, function(player,name)
+		tempsurvive.cloth_update(player)
+	end,player,name)
+end)
+
+minetest.register_on_respawnplayer(function(player)
+	local t=tempsurvive.player[player:get_player_name()]
+	t.temp=0
+	player:hud_change(t.bar, "text", tempsurvive.bar.text .."^[colorize:#00ff00cc")
+	player:hud_change(t.bar, "number", t.temp)
+	player:hud_change(t.screen, "text", tempsurvive.screen.text)
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	tempsurvive.player[player:get_player_name()]=nil
+end)
 
 minetest.register_privilege("no_temperature", {
 	description = "Not affected by temperatures (relogin to take effect)",
@@ -179,6 +206,9 @@ minetest.register_globalstep(function(dtime)
 				temp=temp+tempsurvive.nodes[itn].add*2
 			end
 
+			local cr=ptemp.coldness_resistance-ptemp.warming
+			local hr=ptemp.heat_resistance+ptemp.cooling
+
 			local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
 
 			for i,no in pairs(a) do
@@ -193,25 +223,25 @@ minetest.register_globalstep(function(dtime)
 
 			ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*tempsurvive.speed)
 
-			if ptemp.temp<ptemp.coldness_resistance then
+			if ptemp.temp<cr then
 				player:punch(player,1+math.floor((ptemp.temp-ptemp.coldness_resistance)*-0.1),{full_punch_interval=1,damage_groups={fleshy=1}})
-			elseif ptemp.temp>ptemp.heat_resistance then
+			elseif ptemp.temp>hr then
 				player:punch(player,1+math.floor((ptemp.temp-ptemp.heat_resistance)*0.5),{full_punch_interval=1,damage_groups={fleshy=1}})
 			end
 
 			local pt=math.floor(math.abs(ptemp.temp))
 
-			if ptemp.temp<0 and pt<=ptemp.coldness_resistance*-1 then
-				local t=math.floor(pt/math.abs(ptemp.coldness_resistance)*15)
+			if ptemp.temp<0 and pt<=cr*-1 then
+				local t=math.floor(pt/math.abs(cr)*15)
 				local ht=tempsurvive.n2dhex(math.ceil(t/2))
 				player:hud_change(ptemp.bar, "text", tempsurvive.bar.text .."^[colorize:#00" .. tempsurvive.n2dhex(15-t) .. tempsurvive.n2dhex(t) .."cc")
-				player:hud_change(ptemp.bar, "number", 20-math.floor(pt/math.abs(ptemp.coldness_resistance)*20))
+				player:hud_change(ptemp.bar, "number", 20-math.floor(pt/math.abs(cr)*20))
 				player:hud_change(ptemp.screen, "text", tempsurvive.screen.text .."^[colorize:#00" .. ht .. tempsurvive.n2dhex(t) ..  ht)
-			elseif ptemp.temp>=0 and pt<=ptemp.heat_resistance then
-				local t=math.floor(pt/math.abs(ptemp.heat_resistance)*15)
+			elseif ptemp.temp>=0 and pt<=hr then
+				local t=math.floor(pt/math.abs(hr)*15)
 				local ht=tempsurvive.n2dhex(math.ceil(t/2))
 				player:hud_change(ptemp.bar, "text", tempsurvive.bar.text .."^[colorize:#" .. tempsurvive.n2dhex(t) ..tempsurvive.n2dhex(15-t) .."00cc")
-				player:hud_change(ptemp.bar, "number", 20+math.floor(pt/math.abs(ptemp.heat_resistance)*20))
+				player:hud_change(ptemp.bar, "number", 20+math.floor(pt/math.abs(hr)*20))
 				player:hud_change(ptemp.screen, "text", tempsurvive.screen.text .."^[colorize:#" .. tempsurvive.n2dhex(t) .. ht .. "00" ..  ht)
 			end
 		end
@@ -224,26 +254,6 @@ tempsurvive.n2dhex=function(n)
 	local a2=a[n+1] or "f"
 	return a2 .. a2
 end
-
-minetest.register_on_joinplayer(function(player)
-	tempsurvive.new(player)
-	local name=player:get_player_name()
-	if tempsurvive.player[name].full_resistance then return end
-	tempsurvive.player[name].bar=player:hud_add(tempsurvive.bar)
-	tempsurvive.player[name].screen=player:hud_add(tempsurvive.screen)
-end)
-
-minetest.register_on_respawnplayer(function(player)
-	local t=tempsurvive.player[player:get_player_name()]
-	t.temp=0
-	player:hud_change(t.bar, "text", tempsurvive.bar.text .."^[colorize:#00ff00cc")
-	player:hud_change(t.bar, "number", t.temp)
-	player:hud_change(t.screen, "text", tempsurvive.screen.text)
-end)
-
-minetest.register_on_leaveplayer(function(player)
-	tempsurvive.player[player:get_player_name()]=nil
-end)
 
 minetest.register_craft({
 	output = "tempsurvive:thermometer",
@@ -308,4 +318,202 @@ minetest.register_node("tempsurvive:thermometer", {
 		meta:set_string("infotext", math.floor(temp*10)*0.1)
 		return true
 	end,
+})
+
+
+minetest.register_node("tempsurvive:clothes_bag", {
+	description = "Clothes bag",
+	tiles = {"tempsurvive_bag.png"},
+	groups = {dig_immediate=3},
+	drawtype="nodebox",
+	paramtype="light",
+	paramtype2="facedir",
+	node_box = {
+		type = "fixed",
+		fixed = {
+			{-0.5, -0.5, -0.3125, 0.5, 0.0625, 0.375},
+			{-0.5, 0.0625, -0.25, 0.5, 0.125, 0.3125}
+		}
+	},
+	on_use=function(itemstack, user, pointed_thing)
+		local w,c=0,0
+		local inv=user:get_inventory()
+		for i=1,9,1 do
+			local name=inv:get_stack("clothes",i):get_name()
+			local a=tempsurvive.clothes[name]
+			if a then
+				c=c+a.cooling
+				w=w+a.warming
+			end
+		end
+
+		local gui="size[8,8]"
+		.."list[current_player;clothes;2.5,0;3,3;]"
+		.."list[current_player;main;0,4;8,32;]"
+		.."listring[current_player;main]"
+		.."listring[current_player;clothes]"
+		.."label[0,0;Warming: " .. w .."\nCooling: " .. c .."]"
+		minetest.after(0.1, function(gui)
+			return minetest.show_formspec(user:get_player_name(), "tempsurvive.bag",gui)
+		end, gui)
+	end,
+	on_rightclick = function(pos, node, player, itemstack, pointed_thing)
+		minetest.registered_nodes["tempsurvive:clothes_bag"].on_use(1,player)
+	end,
+})
+
+minetest.register_on_player_receive_fields(function(player, form, p)
+	if form=="tempsurvive.bag" and p.quit then
+		local inv=player:get_inventory()
+		local layers={}
+		for i=1,9,1 do
+			local name=inv:get_stack("clothes",i):get_name()
+			local clothes=tempsurvive.clothes[name]
+			if not clothes or layers[clothes.part .. " " .. clothes.layer] then
+				if inv:room_for_item("main",name) then
+					inv:add_item("main",inv:get_stack("clothes",i))
+				else
+					minetest.add_item(player:get_pos(), inv:get_stack("clothes",i))
+				end
+				inv:remove_item("clothes",inv:get_stack("clothes",i))
+			else
+				layers[clothes.part .. " " .. clothes.layer]=1
+			end
+		end
+		tempsurvive.cloth_update(player)
+	end
+end)
+
+tempsurvive.cloth_update=function(player)
+	local p=tempsurvive.player[player:get_player_name()]
+	local inv=player:get_inventory()
+	local layer={}
+	local layern={}
+	local skin=player:get_properties().textures[1]
+
+	if not p.skin or (p.skin~=skin and not string.find(skin,"%^")) then
+		p.skin=skin
+	end
+	local textures=p.skin
+
+	p.warming=0
+	p.cooling=0
+	for i=1,9,1 do
+		local clothe=tempsurvive.clothes[inv:get_stack("clothes",i):get_name()]
+		if clothe then
+			p.warming=p.warming+clothe.warming
+			p.cooling=p.cooling+clothe.cooling
+			if not layer[clothe.layer .. ""] then
+				layer[clothe.layer .. ""]={}
+				table.insert(layern,clothe.layer)
+			end
+			table.insert(layer[clothe.layer .. ""],clothe.texture)
+			
+		end
+	end
+	table.sort(layern)
+	for i,n in ipairs(layern) do
+		for ii,t in pairs(layer[n .. ""]) do
+			textures=textures .. "^" .. t
+		end
+	end
+
+	if armor then
+		player:set_properties({
+			mesh="3d_armor_character.b3d",
+			textures={
+				textures,
+				player:get_properties().textures[3],
+				"3d_armor_trans.png"
+			}
+		})
+		armor:set_player_armor(player)
+		armor:update_inventory(player)
+	else
+		player:set_properties({textures={textures}})
+	end
+end
+
+
+
+
+--[[
+tempsurvive.register_cloth(name,{
+	texture="",	-- required
+	description="",	-- optional
+	part="",		-- optional (arm/leg, chested/head, head body)
+	layer=1,		-- optional (texture layer)
+	warming=1,	-- optional
+	cooling=1,	-- optional
+})
+--]]
+
+tempsurvive.register_clothe=function(name,def)
+	def.description=def.description or name
+	local part
+	local mn=minetest.get_current_modname()
+
+	if def.part=="arm" or def.part=="leg" then
+		part="tempsurvive_arm-leg.obj"
+	elseif def.part=="chested" then
+		part="tempsurvive_chested-head.obj"
+	elseif def.part=="head" then
+		part="tempsurvive_head.obj"
+	else
+		part="tempsurvive_body.obj"
+		def.part="all"
+	end
+
+	if not (def.warming or def.cooling) then
+		def.warming=2
+	end
+
+	if def.warming and not def.cooling then
+		def.cooling=def.warming*-1
+	elseif def.cooling and not def.warming then
+		def.warming=def.cooling*-1
+	end
+
+	tempsurvive.clothes[mn .. ":cloth_" .. name]={
+		warming=def.warming,
+		cooling=def.cooling,
+		part=def.part,
+		layer=def.layer or 2,
+		texture=def.texture
+	}
+
+	minetest.register_node(mn .. ":cloth_" .. name, {
+		description = def.description .. " Warming: " .. def.warming ..", Cooling: " .. def.cooling,
+		stack_max=1,
+		drop="",
+		tiles={def.texture},
+		groups={dig_immediate=3,tempsurvive_cloths=1},
+		drawtype="mesh",
+		mesh=part,
+		paramtype="light",
+		on_use=function(itemstack, user, pointed_thing)
+		end,
+		on_place = function(itemstack, placer, pointed_thing)
+			return
+		end,
+		on_construct = function(pos)
+			minetest.after(0.01, function(pos)
+				minetest.remove_node(pos)
+			end,pos)
+		end,
+	})
+
+	if def.craft then
+		minetest.register_craft({
+			output = mn .. ":cloth_" .. name,
+			recipe = def.craft
+		})
+	end
+end
+
+minetest.register_craft({
+	output = "tempsurvive:clothes_bag",
+	recipe = {
+		{"group:wool","group:tempsurvive_cloths","group:wool"},
+	}
 })
