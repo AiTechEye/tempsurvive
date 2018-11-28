@@ -414,7 +414,7 @@ tempsurvive.cloth_update=function(player)
 	table.sort(layern)
 	for i,n in ipairs(layern) do
 		for ii,t in pairs(layer[n .. ""]) do
-			textures=textures .. "^" .. t
+			textures=textures .. "^" .. t 
 		end
 	end
 
@@ -438,7 +438,7 @@ end
 
 
 --[[
-tempsurvive.register_cloth(name,{
+tempsurvive.register_clothe(name,{
 	texture="",	-- required
 	description="",	-- optional
 	part="",		-- optional (arm/leg, chested/head, head body)
@@ -487,11 +487,12 @@ tempsurvive.register_clothe=function(name,def)
 		stack_max=1,
 		drop="",
 		tiles={def.texture},
-		groups={dig_immediate=3,tempsurvive_cloths=1},
+		groups={dig_immediate=3,tempsurvive_cloths=1,cloth=1},
 		drawtype="mesh",
 		mesh=part,
 		paramtype="light",
 		on_use=function(itemstack, user, pointed_thing)
+			minetest.registered_nodes["tempsurvive:clothes_bag"].on_use(1,user)
 		end,
 		on_place = function(itemstack, placer, pointed_thing)
 			return
@@ -508,6 +509,11 @@ tempsurvive.register_clothe=function(name,def)
 			output = mn .. ":cloth_" .. name,
 			recipe = def.craft
 		})
+		minetest.register_craft({
+			type = "fuel",
+			recipe = mn .. ":cloth_" .. name,
+			burntime = 2,
+		})
 	end
 end
 
@@ -515,5 +521,94 @@ minetest.register_craft({
 	output = "tempsurvive:clothes_bag",
 	recipe = {
 		{"group:wool","group:tempsurvive_cloths","group:wool"},
+	}
+})
+minetest.register_craft({
+	type = "fuel",
+	recipe = "tempsurvive:clothes_bag",
+	burntime = 4
+})
+
+tempsurvive.register_cloth=function(name,hex,amount,craft)
+	local itnam=minetest.get_current_modname() ..":cloth_" .. name
+	minetest.register_craftitem(itnam, {
+		description = string.upper(string.sub(name,1,1)) .. string.sub(name,2,string.len(name)) .." Cloth",
+		inventory_image = "tempsurvive_bag.png^[colorize:#" .. hex .."^tempsurvive_cloth.png",
+		groups = {cloth=1}
+	})
+	if craft then
+	minetest.register_craft({
+		type = "fuel",
+		recipe = itnam,
+		burntime = 2
+	})
+	minetest.register_craft({
+		output = itnam .." " .. amount,
+		recipe = craft
+	})
+	end
+end
+
+tempsurvive.register_cloth("white","ffffff",4,{{"wool:white"}})
+tempsurvive.register_cloth("gray","777777",4,{{"wool:grey"}})
+tempsurvive.register_cloth("darkgrey","333333",4,{{"wool:dark_grey"}})
+tempsurvive.register_cloth("black","000000",4,{{"wool:black"}})
+tempsurvive.register_cloth("lightgreen","00ff00",4,{{"wool:green"}})
+tempsurvive.register_cloth("green","008800",4,{{"wool:dark_green"}})
+tempsurvive.register_cloth("darkgreen","005500",8,{{"wool:dark_green","wool:black"}})
+tempsurvive.register_cloth("yellow","ffff00",4,{{"wool:yellow"}})
+tempsurvive.register_cloth("red","ff0000",4,{{"wool:red"}})
+tempsurvive.register_cloth("darkred","770000",8,{{"wool:red","wool:black"}})
+tempsurvive.register_cloth("brown","251700",4,{{"wool:brown"}})
+tempsurvive.register_cloth("orange","ff4500",4,{{"wool:orange"}})
+tempsurvive.register_cloth("pruple","9300ff",4,{{"wool:violet"}})
+tempsurvive.register_cloth("pink","ff65b8",4,{{"wool:pink"}})
+tempsurvive.register_cloth("cyan","00ffff",4,{{"wool:cyan"}})
+tempsurvive.register_cloth("blue","0000ff",4,{{"wool:blue"}})
+tempsurvive.register_cloth("lightblue","0081ff",8,{{"wool:blue","wool:white"}})
+tempsurvive.register_cloth("darkblue","000044",4,{{"wool:blue","wool:black"}})
+
+tempsurvive.register_clothe("leather_gloves",{
+	description="Leather Gloves",
+	texture="tempsurvive_gloves.png",
+	part="arm",
+	layer=9,
+	craft={
+		{"tempsurvive:cloth_brown","","tempsurvive:cloth_brown"},
+		{"tempsurvive:cloth_brown","","tempsurvive:cloth_brown"},
+		{"","",""},
+	},
+})
+tempsurvive.register_clothe("leather_shoes",{
+	description="Leather Shoes",
+	texture="tempsurvive_shoes.png",
+	part="leg",
+	layer=9,
+	craft={
+		{"","",""},
+		{"tempsurvive:cloth_brown","","tempsurvive:cloth_brown"},
+		{"tempsurvive:cloth_brown","","tempsurvive:cloth_brown"},
+	},
+})
+tempsurvive.register_clothe("shirt",{
+	description="Red Shirt",
+	texture="tempsurvive_shirt.png",
+	part="chested",
+	layer=1,
+	craft={
+		{"tempsurvive:cloth_red","tempsurvive:cloth_red","tempsurvive:cloth_red"},
+		{"","",""},
+		{"","",""},
+	},
+})
+tempsurvive.register_clothe("sweatshirt",{
+	description="Orange Sweatshirt",
+	texture="tempsurvive_sweatshirt.png",
+	part="chested",
+	layer=2,
+	craft={
+		{"tempsurvive:cloth_orange","tempsurvive:cloth_orange","tempsurvive:cloth_orange"},
+		{"","tempsurvive:cloth_orange",""},
+		{"","tempsurvive:cloth_orange",""},
 	}
 })
