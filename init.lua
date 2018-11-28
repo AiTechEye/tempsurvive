@@ -595,6 +595,7 @@ tempsurvive.register_clothe("shirt",{
 	texture="tempsurvive_shirt.png",
 	part="chested",
 	layer=1,
+	warming=1,
 	craft={
 		{"tempsurvive:cloth_red","tempsurvive:cloth_red","tempsurvive:cloth_red"},
 		{"","",""},
@@ -610,5 +611,16 @@ tempsurvive.register_clothe("sweatshirt",{
 		{"tempsurvive:cloth_orange","tempsurvive:cloth_orange","tempsurvive:cloth_orange"},
 		{"","tempsurvive:cloth_orange",""},
 		{"","tempsurvive:cloth_orange",""},
+	}
+})
+
+tempsurvive.register_clothe("brown_woolhat",{
+	description="Brown Woolhat",
+	texture="tempsurvive_brownwollhat.png",
+	part="head",
+	layer=2,
+	craft={
+		{"tempsurvive:cloth_brown","tempsurvive:cloth_brown","tempsurvive:cloth_brown"},
+		{"tempsurvive:cloth_brown","","tempsurvive:cloth_brown"},
 	}
 })
