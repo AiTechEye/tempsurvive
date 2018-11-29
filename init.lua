@@ -624,3 +624,16 @@ tempsurvive.register_clothe("brown_woolhat",{
 		{"tempsurvive:cloth_brown","","tempsurvive:cloth_brown"},
 	}
 })
+
+tempsurvive.register_clothe("lightblue_overall",{
+	description="Lightblue Overall",
+	texture="tempsurvive_lightblueoverall.png",
+	part="body",
+	warming=10,
+	layer=8,
+	craft={
+		{"tempsurvive:cloth_lightblue","tempsurvive:cloth_lightblue","tempsurvive:cloth_lightblue"},
+		{"tempsurvive:cloth_lightblue","tempsurvive:cloth_darkblue","tempsurvive:cloth_lightblue"},
+		{"tempsurvive:cloth_lightblue","wool:blue","tempsurvive:cloth_lightblue"},
+	}
+})
