@@ -33,6 +33,149 @@ tempsurvive.register_cloth("blue","0000ff",4,{{"wool:blue"}})
 tempsurvive.register_cloth("lightblue","0081ff",8,{{"wool:blue","wool:white"}})
 tempsurvive.register_cloth("darkblue","000044",4,{{"wool:blue","wool:black"}})
 
+minetest.register_tool("tempsurvive:plank_with_stick", {
+	description = "Plank with stick",
+	inventory_image = "tempsurvive_plank_with_stick.png",
+	groups = {wood=1,flammable=4},
+	on_use = function(itemstack, user, pointed_thing)
+		if pointed_thing.type=="node" and not minetest.is_protected(pointed_thing.above,user:get_player_name()) then
+			itemstack:add_wear(math.random(500,2000))
+			minetest.set_node(pointed_thing.above,{name="tempsurvive:keepable_fire"})
+		end
+		return itemstack
+	end
+})
+
+minetest.register_craft({
+	output = "tempsurvive:plank_with_stick",
+	recipe = {
+		{"group:wood","",""},
+		{"","",""},
+		{"","","group:stick"},
+	}
+})
+
+minetest.register_node("tempsurvive:keepable_fire", {
+	description = "Keepable fire",
+	tiles = {
+		{
+			name="fire_basic_flame_animated.png",
+			animation={
+				type="vertical_frames",
+				aspect_w=16,
+				aspect_h=16,
+				length=1,
+			}
+		}
+	},
+	groups = {dig_immediate=3,igniter=2,not_in_creative_inventory=1},
+	drawtype="firelike",
+	paramtype="light",
+	light_source=12,
+	walkable=false,
+	sunlight_propagetes=true,
+	damage_per_secound=5,
+	drop="",
+	on_timer = function (pos, elapsed)
+		local meta = minetest.get_meta(pos)
+		local inv = meta:get_inventory()
+		local stack
+		local slot=meta:get_int("slot")
+
+		for i=slot,9 do
+			stack=inv:get_stack("burning",i)
+			slot=i
+			if stack:get_count()~=0 then
+				break
+			end
+
+		end
+
+		if slot==9 then
+			meta:set_int("temp",meta:get_int("power"))
+			meta:set_int("power",0)
+		end
+
+		if stack:get_count()==0 then
+			for i=1,9 do
+				stack=inv:get_stack("burning",i)
+				if stack:get_count()~=0 then
+					slot=i
+					break
+				end
+			end
+		end
+
+		local time=minetest.get_craft_result({method="fuel", width=1, items={stack:get_name()}}).time
+		if time==0 then time=minetest.get_item_group(stack:get_name(),"flammable") end
+		if time==0 then time=minetest.get_item_group(stack:get_name(),"igniter") end
+
+		meta:set_int("power",meta:get_int("power")+time)
+		stack:set_count(stack:get_count()-1)
+		inv:set_stack("burning",slot,stack)
+
+		if time==0 then
+			minetest.remove_node(pos)
+			return
+		elseif slot==9 or meta:get_int("temp")<meta:get_int("power") then
+			meta:set_int("temp",meta:get_int("power"))
+		end
+		slot=slot+1
+		if slot>9 then
+			slot=1
+		end
+
+		meta:set_int("slot",slot+1)
+		minetest.get_node_timer(pos):start(time)
+	end,
+
+	on_construct=function(pos)
+		minetest.get_node_timer(pos):start(math.random(5,10))
+	--end,
+
+
+	--after_place_node = function(pos, placer, itemstack)
+		local meta = minetest.get_meta(pos)
+		local inv = meta:get_inventory()
+		meta:set_int("power", 0)
+		meta:set_int("temp", 0)
+		inv:set_size("burning", 9)
+		inv:set_size("slot", 1)
+		meta:set_string("formspec",
+		"size[8,8]"
+		.."list[current_name;burning;2.5,0;3,3;]"
+		.."list[current_player;main;0,4;8,32;]"
+		.."listring[current_player;main]"
+		.."listring[current_name;burning]"
+		)
+	end,
+	on_rightclick = function(pos, node, player, itemstack, pointed_thing)
+		
+	end,
+	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
+		local item=stack:get_name()
+		local time=minetest.get_craft_result({method="fuel", width=1, items={item}}).time + minetest.get_item_group(item,"flammable") + minetest.get_item_group(item,"igniter")
+		if time==0 then
+			return 0
+		end
+		local meta = minetest.get_meta(pos)
+		return stack:get_count()
+	end,
+	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
+		return 0
+	end,
+	allow_metadata_inventory_move = function(pos, from_list, from_index, to_list, to_index, count, player)
+		return 0
+	end,
+	on_punch = function(pos, node, player, pointed_thing)
+		local meta = minetest.get_meta(pos)
+		local inv = meta:get_inventory()
+		for i=1,9 do
+			minetest.add_item(pos, inv:get_stack("burning",i))
+		end
+	end,
+})
+
 minetest.register_node("tempsurvive:clothes_bag", {
 	description = "Clothes bag",
 	tiles = {"tempsurvive_bag.png"},

@@ -172,12 +172,14 @@ minetest.register_globalstep(function(dtime)
 
 			for i,no in pairs(a) do
 				local name=minetest.get_node(no).name
-				temp=temp+tempsurvive.spread_temperature(
-					pos,
-					no,
-					minetest.get_item_group(name,"tempsurvive_add"),
-					minetest.get_item_group(name,"tempsurvive_rad")
-				)
+				local add=minetest.get_item_group(name,"tempsurvive_add")
+				local rad=minetest.get_item_group(name,"tempsurvive_rad")
+
+				if minetest.get_item_group(name,"tempsurvive_temp_by_meta")>0 then
+					add=add+minetest.get_meta(pos):get_int("temp")
+				end
+
+				temp=temp+tempsurvive.spread_temperature(pos,no,add,rad)
 			end
 
 			ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*tempsurvive.speed)
