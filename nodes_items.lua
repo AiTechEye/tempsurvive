@@ -33,13 +33,13 @@ tempsurvive.register_cloth("blue","0000ff",4,{{"wool:blue"}})
 tempsurvive.register_cloth("lightblue","0081ff",8,{{"wool:blue","wool:white"}})
 tempsurvive.register_cloth("darkblue","000044",4,{{"wool:blue","wool:black"}})
 
-minetest.register_tool("tempsurvive:plank_with_stick", {
+minetest.register_craftitem("tempsurvive:plank_with_stick", {
 	description = "Plank with stick",
 	inventory_image = "tempsurvive_plank_with_stick.png",
 	groups = {wood=1,flammable=4},
-	on_use = function(itemstack, user, pointed_thing)
+	on_place = function(itemstack, user, pointed_thing)
 		if pointed_thing.type=="node" and not minetest.is_protected(pointed_thing.above,user:get_player_name()) then
-			itemstack:add_wear(math.random(500,2000))
+			itemstack:take_item()
 			minetest.set_node(pointed_thing.above,{name="tempsurvive:keepable_fire"})
 		end
 		return itemstack
@@ -47,7 +47,7 @@ minetest.register_tool("tempsurvive:plank_with_stick", {
 })
 
 minetest.register_craft({
-	output = "tempsurvive:plank_with_stick",
+	output = "tempsurvive:plank_with_stick 2",
 	recipe = {
 		{"group:wood","",""},
 		{"","",""},
@@ -68,7 +68,7 @@ minetest.register_node("tempsurvive:keepable_fire", {
 			}
 		}
 	},
-	groups = {dig_immediate=3,igniter=2,not_in_creative_inventory=1},
+	groups = {dig_immediate=3,igniter=2,not_in_creative_inventory=1,tempsurvive_rad=15,tempsurvive=1},
 	drawtype="firelike",
 	paramtype="light",
 	light_source=12,
@@ -79,7 +79,7 @@ minetest.register_node("tempsurvive:keepable_fire", {
 	on_timer = function (pos, elapsed)
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
-		local stack
+		local stack=inv:get_stack("burning",1)
 		local slot=meta:get_int("slot")
 
 		for i=slot,9 do
@@ -125,16 +125,12 @@ minetest.register_node("tempsurvive:keepable_fire", {
 			slot=1
 		end
 
-		meta:set_int("slot",slot+1)
+		meta:set_int("slot",slot)
 		minetest.get_node_timer(pos):start(time)
 	end,
 
 	on_construct=function(pos)
 		minetest.get_node_timer(pos):start(math.random(5,10))
-	--end,
-
-
-	--after_place_node = function(pos, placer, itemstack)
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 		meta:set_int("power", 0)
@@ -148,9 +144,6 @@ minetest.register_node("tempsurvive:keepable_fire", {
 		.."listring[current_player;main]"
 		.."listring[current_name;burning]"
 		)
-	end,
-	on_rightclick = function(pos, node, player, itemstack, pointed_thing)
-		
 	end,
 	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
 		local item=stack:get_name()
@@ -167,7 +160,7 @@ minetest.register_node("tempsurvive:keepable_fire", {
 	allow_metadata_inventory_move = function(pos, from_list, from_index, to_list, to_index, count, player)
 		return 0
 	end,
-	on_punch = function(pos, node, player, pointed_thing)
+	on_destruct = function(pos)
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 		for i=1,9 do
@@ -252,12 +245,13 @@ minetest.register_node("tempsurvive:thermometer", {
 		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
 		for i,no in pairs(a) do
 			local name=minetest.get_node(no).name
-			temp=temp+tempsurvive.spread_temperature(
-				pos,
-				no,
-				minetest.get_item_group(name,"tempsurvive_add"),
-				minetest.get_item_group(name,"tempsurvive_rad")
-			)
+			local add=minetest.get_item_group(name,"tempsurvive_add")
+			local rad=minetest.get_item_group(name,"tempsurvive_rad")
+
+			if minetest.get_item_group(name,"tempsurvive_temp_by_meta")>0 then
+				add=add+minetest.get_meta(pos):get_int("temp")
+			end
+			temp=temp+tempsurvive.spread_temperature(pos,no,add,rad)
 		end
 		minetest.chat_send_player(user:get_player_name(), math.floor(temp*10)*0.1)
 	end,
@@ -273,12 +267,13 @@ minetest.register_node("tempsurvive:thermometer", {
 
 		for i,no in pairs(a) do
 			local name=minetest.get_node(no).name
-			temp=temp+tempsurvive.spread_temperature(
-				pos,
-				no,
-				minetest.get_item_group(name,"tempsurvive_add"),
-				minetest.get_item_group(name,"tempsurvive_rad")
-			)
+			local add=minetest.get_item_group(name,"tempsurvive_add")
+			local rad=minetest.get_item_group(name,"tempsurvive_rad")
+
+			if minetest.get_item_group(name,"tempsurvive_temp_by_meta")>0 then
+				add=add+minetest.get_meta(pos):get_int("temp")
+			end
+			temp=temp+tempsurvive.spread_temperature(pos,no,add,rad)
 		end
 		meta:set_string("infotext", math.floor(temp*10)*0.1)
 		return true
