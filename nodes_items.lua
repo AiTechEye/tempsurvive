@@ -33,6 +33,171 @@ tempsurvive.register_cloth("blue","0000ff",4,{{"wool:blue"}})
 tempsurvive.register_cloth("lightblue","0081ff",8,{{"wool:blue","wool:white"}})
 tempsurvive.register_cloth("darkblue","000044",4,{{"wool:blue","wool:black"}})
 
+minetest.register_node("tempsurvive:fire", {
+	tiles = {
+		{
+			name="fire_basic_flame_animated.png",
+			animation={
+				type="vertical_frames",
+				aspect_w=16,
+				aspect_h=16,
+				length=1,
+			}
+		}
+	},
+	groups = {not_in_creative_inventory=1},
+	drawtype="firelike",
+	paramtype="light",
+	light_source=13,
+	sunlight_propagetes=true,
+	drop="",
+})
+
+minetest.register_node("tempsurvive:cold_fire", {
+	tiles = {
+		{
+			name="fire_basic_flame_animated.png^[colorize:#000055aa",
+			animation={
+				type="vertical_frames",
+				aspect_w=16,
+				aspect_h=16,
+				length=1,
+			}
+		}
+	},
+	groups = {not_in_creative_inventory=1},
+	drawtype="firelike",
+	paramtype="light",
+	light_source=13,
+	sunlight_propagetes=true,
+	drop="",
+})
+
+minetest.register_craft({
+	output = "tempsurvive:stove",
+	recipe = {
+		{"default:stone_block","default:stone_block","default:stone_block"},
+		{"","default:glass","default:stone_block"},
+		{"default:stone_block","default:stone_block","default:stone_block"},
+	}
+})
+
+minetest.register_node("tempsurvive:stove", {
+	description = "stove",
+	groups = {cracky=3,tempsurvive_temp_by_meta=1,tempsurvive_rad=15,tempsurvive=1},
+	tiles={"tempsurvive_stove.png"},
+	drawtype="mesh",
+	mesh="tempsurvive_stove.obj",
+	paramtype="light",
+	paramtype2="facedir",
+	paramtype2="facedir",
+	selection_box = {
+		type = "fixed",
+		fixed = {
+			{-0.5, -0.5, -0.5, 0.5, 1.5, 0.5},
+		}
+	},
+	collision_box = {
+		type = "fixed",
+		fixed = {
+			{-0.5, -0.5, -0.5, 0.5, 1.5, 0.5},
+		}
+	},
+	on_timer = function (pos, elapsed)
+		local meta = minetest.get_meta(pos)
+		local inv = meta:get_inventory()
+		local slot=meta:get_int("slot")
+		local stack=inv:get_stack("burning",slot)
+		local ind=slot
+
+		if inv:get_stack("burning",slot):get_name()=="" then
+			local slots={1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9}
+			for i=slot,slot+9 do
+				ind=i
+				slot=slots[i]
+				stack=inv:get_stack("burning",slot)
+				if stack:get_count()>0 then
+					break
+				end
+			end
+		end
+
+		local time=minetest.get_craft_result({method="fuel", width=1, items={stack:get_name()}}).time
+		if time==0 then time=minetest.get_item_group(stack:get_name(),"flammable") end
+		if time==0 then time=minetest.get_item_group(stack:get_name(),"igniter") end
+		if time==0 then time=minetest.get_item_group(stack:get_name(),"tempsurvive_add") end
+
+		meta:set_int("power",meta:get_int("power")+time)
+		stack:set_count(stack:get_count()-1)
+		inv:set_stack("burning",slot,stack)
+
+		if time==0 then
+			minetest.remove_node({x=pos.x,y=pos.y+1,z=pos.z})
+			meta:set_int("temp",0)
+			meta:set_int("power",0)
+			return
+		elseif math.abs(meta:get_int("temp"))<math.abs(meta:get_int("power")) then
+			meta:set_int("temp",meta:get_int("power"))
+		end
+
+		if meta:get_int("power")>0 then
+			minetest.set_node({x=pos.x,y=pos.y+1,z=pos.z},{name="tempsurvive:fire"})
+		else
+			minetest.set_node({x=pos.x,y=pos.y+1,z=pos.z},{name="tempsurvive:cold_fire"})
+		end
+
+		slot=slot+1
+		if slot>9 or ind>=9 then
+			slot=1
+			meta:set_int("temp",meta:get_int("power"))
+			meta:set_int("power",0)
+		end
+		meta:set_int("slot",slot)
+		minetest.get_node_timer(pos):start(math.abs(time))
+	end,
+	on_construct=function(pos)
+		minetest.get_node_timer(pos):start(math.random(5,10))
+		local meta = minetest.get_meta(pos)
+		local inv = meta:get_inventory()
+		meta:set_int("power", 0)
+		meta:set_int("temp", 0)
+		meta:set_int("slot", 1)
+		inv:set_size("burning", 9)
+		meta:set_string("formspec",
+		"size[8,8]"
+		.."list[current_name;burning;2.5,0;3,3;]"
+		.."list[current_player;main;0,4;8,32;]"
+		.."listring[current_player;main]"
+		.."listring[current_name;burning]"
+		)
+	end,
+	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
+		local item=stack:get_name()
+		local time=minetest.get_craft_result({method="fuel", width=1, items={item}}).time + minetest.get_item_group(item,"flammable") + minetest.get_item_group(item,"igniter") + minetest.get_item_group(stack:get_name(),"tempsurvive_add")
+		if time==0 then
+			return 0
+		end
+		if not minetest.get_node_timer(pos):is_started() then
+			minetest.get_node_timer(pos):start(0.2)
+		end
+		return stack:get_count()
+	end,
+	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
+		return 0
+	end,
+	allow_metadata_inventory_move = function(pos, from_list, from_index, to_list, to_index, count, player)
+		return 0
+	end,
+	on_destruct = function(pos)
+		local meta = minetest.get_meta(pos)
+		local inv = meta:get_inventory()
+		minetest.remove_node({x=pos.x,y=pos.y+1,z=pos.z})
+		for i=1,9 do
+			minetest.add_item(pos, inv:get_stack("burning",i))
+		end
+	end,
+})
+
 minetest.register_craftitem("tempsurvive:plank_with_stick", {
 	description = "Plank with stick",
 	inventory_image = "tempsurvive_plank_with_stick.png",
@@ -68,7 +233,7 @@ minetest.register_node("tempsurvive:keepable_fire", {
 			}
 		}
 	},
-	groups = {dig_immediate=3,igniter=2,not_in_creative_inventory=1,tempsurvive_rad=15,tempsurvive=1},
+	groups = {dig_immediate=3,igniter=2,not_in_creative_inventory=1,tempsurvive_temp_by_meta=1,tempsurvive_rad=15,tempsurvive=1},
 	drawtype="firelike",
 	paramtype="light",
 	light_source=12,
@@ -79,28 +244,17 @@ minetest.register_node("tempsurvive:keepable_fire", {
 	on_timer = function (pos, elapsed)
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
-		local stack=inv:get_stack("burning",1)
 		local slot=meta:get_int("slot")
+		local stack=inv:get_stack("burning",slot)
+		local ind=slot
 
-		for i=slot,9 do
-			stack=inv:get_stack("burning",i)
-			slot=i
-			if stack:get_count()~=0 then
-				break
-			end
-
-		end
-
-		if slot==9 then
-			meta:set_int("temp",meta:get_int("power"))
-			meta:set_int("power",0)
-		end
-
-		if stack:get_count()==0 then
-			for i=1,9 do
-				stack=inv:get_stack("burning",i)
-				if stack:get_count()~=0 then
-					slot=i
+		if inv:get_stack("burning",slot):get_name()=="" then
+			local slots={1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9}
+			for i=slot,slot+9 do
+				ind=i
+				slot=slots[i]
+				stack=inv:get_stack("burning",slot)
+				if stack:get_count()>0 then
 					break
 				end
 			end
@@ -109,6 +263,10 @@ minetest.register_node("tempsurvive:keepable_fire", {
 		local time=minetest.get_craft_result({method="fuel", width=1, items={stack:get_name()}}).time
 		if time==0 then time=minetest.get_item_group(stack:get_name(),"flammable") end
 		if time==0 then time=minetest.get_item_group(stack:get_name(),"igniter") end
+		if time==0 and stack:get_count()>0 and meta:get_int("slot")~=slot and meta:get_int("power")>0 then
+			time=1
+		end
+
 
 		meta:set_int("power",meta:get_int("power")+time)
 		stack:set_count(stack:get_count()-1)
@@ -117,14 +275,15 @@ minetest.register_node("tempsurvive:keepable_fire", {
 		if time==0 then
 			minetest.remove_node(pos)
 			return
-		elseif slot==9 or meta:get_int("temp")<meta:get_int("power") then
+		elseif meta:get_int("temp")<meta:get_int("power") then
 			meta:set_int("temp",meta:get_int("power"))
 		end
 		slot=slot+1
-		if slot>9 then
+		if slot>9 or ind>=9 then
 			slot=1
+			meta:set_int("temp",meta:get_int("power"))
+			meta:set_int("power",0)
 		end
-
 		meta:set_int("slot",slot)
 		minetest.get_node_timer(pos):start(time)
 	end,
@@ -135,8 +294,8 @@ minetest.register_node("tempsurvive:keepable_fire", {
 		local inv = meta:get_inventory()
 		meta:set_int("power", 0)
 		meta:set_int("temp", 0)
+		meta:set_int("slot", 1)
 		inv:set_size("burning", 9)
-		inv:set_size("slot", 1)
 		meta:set_string("formspec",
 		"size[8,8]"
 		.."list[current_name;burning;2.5,0;3,3;]"
@@ -146,12 +305,6 @@ minetest.register_node("tempsurvive:keepable_fire", {
 		)
 	end,
 	allow_metadata_inventory_put = function(pos, listname, index, stack, player)
-		local item=stack:get_name()
-		local time=minetest.get_craft_result({method="fuel", width=1, items={item}}).time + minetest.get_item_group(item,"flammable") + minetest.get_item_group(item,"igniter")
-		if time==0 then
-			return 0
-		end
-		local meta = minetest.get_meta(pos)
 		return stack:get_count()
 	end,
 	allow_metadata_inventory_take = function(pos, listname, index, stack, player)
@@ -242,17 +395,7 @@ minetest.register_node("tempsurvive:thermometer", {
 	on_use=function(itemstack, user, pointed_thing)
 		local pos=pointed_thing.above or user:get_pos()
 		local temp=tempsurvive.get_bio_temperature(pos)
-		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
-		for i,no in pairs(a) do
-			local name=minetest.get_node(no).name
-			local add=minetest.get_item_group(name,"tempsurvive_add")
-			local rad=minetest.get_item_group(name,"tempsurvive_rad")
-
-			if minetest.get_item_group(name,"tempsurvive_temp_by_meta")>0 then
-				add=add+minetest.get_meta(pos):get_int("temp")
-			end
-			temp=temp+tempsurvive.spread_temperature(pos,no,add,rad)
-		end
+		temp=tempsurvive.get_artificial_temperature(pos,temp)
 		minetest.chat_send_player(user:get_player_name(), math.floor(temp*10)*0.1)
 	end,
 	on_construct = function(pos)
@@ -263,18 +406,7 @@ minetest.register_node("tempsurvive:thermometer", {
 	on_timer = function (pos, elapsed)
 		local meta=minetest.get_meta(pos)
 		local temp=tempsurvive.get_bio_temperature(pos)
-		local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
-
-		for i,no in pairs(a) do
-			local name=minetest.get_node(no).name
-			local add=minetest.get_item_group(name,"tempsurvive_add")
-			local rad=minetest.get_item_group(name,"tempsurvive_rad")
-
-			if minetest.get_item_group(name,"tempsurvive_temp_by_meta")>0 then
-				add=add+minetest.get_meta(pos):get_int("temp")
-			end
-			temp=temp+tempsurvive.spread_temperature(pos,no,add,rad)
-		end
+		temp=tempsurvive.get_artificial_temperature(pos,temp)
 		meta:set_string("infotext", math.floor(temp*10)*0.1)
 		return true
 	end,

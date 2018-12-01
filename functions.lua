@@ -39,37 +39,6 @@ minetest.register_privilege("no_temperature", {
 	give_to_singleplayer= false,
 })
 
-minetest.after(0.1, function()
-	local groups_to_change={}
-	for i,v in pairs(tempsurvive.nodes) do
-		if string.find(i,":")==nil then
-			groups_to_change[i]=v
-		elseif minetest.registered_nodes[i] then
-			local group=table.copy(minetest.registered_nodes[i].groups or {})
-			group.tempsurvive=1
-			group.tempsurvive_add=v.add
-			group.tempsurvive_rad=v.rad
-			minetest.override_item(i, {groups=group})
-		end
-	end
-	for i,v in pairs(minetest.registered_nodes) do
-		for ii,vv in pairs(groups_to_change) do
-			if v.groups[ii] then
-				local group=table.copy(v.groups or {})
-				group.tempsurvive=1
-				group.tempsurvive_add=vv.add
-				group.tempsurvive_rad=vv.rad
-				minetest.override_item(i, {groups=group})
-				tempsurvive.nodes[i]={add=vv.add,rad=vv.rad}
-			end
-		end
-	end
-	for ii,vv in pairs(groups_to_change) do
-		tempsurvive.nodes[ii]=nil
-	end
-end)
-
-
 tempsurvive.exposed=function(pos1,pos2,add)
 	local d=vector.distance(pos1,pos2)
 	if d<1 then
@@ -146,6 +115,22 @@ tempsurvive.get_bio_temperature=function(pos)
 	end
 end
 
+tempsurvive.get_artificial_temperature=function(pos,temp)
+	local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
+	for i,no in pairs(a) do
+		local name=minetest.get_node(no).name
+		local add=0
+		local rad=minetest.get_item_group(name,"tempsurvive_rad")
+		if minetest.get_item_group(name,"tempsurvive_temp_by_meta")>0 then
+			add=add+minetest.get_meta(no):get_int("temp")
+		else
+			add=minetest.get_item_group(name,"tempsurvive_add")
+		end
+		temp=temp+tempsurvive.spread_temperature(pos,no,add,rad)
+	end
+	return temp
+end
+
 minetest.register_globalstep(function(dtime)
 	if tempsurvive.step_timer>tempsurvive.step_time then
 		tempsurvive.step_timer=0
@@ -168,19 +153,7 @@ minetest.register_globalstep(function(dtime)
 			local cr=ptemp.coldness_resistance-ptemp.warming
 			local hr=ptemp.heat_resistance+ptemp.cooling
 
-			local a=minetest.find_nodes_in_area({x=pos.x-3, y=pos.y-3, z=pos.z-3}, {x=pos.x+3, y=pos.y+3, z=pos.z+3}, {"group:tempsurvive"})
-
-			for i,no in pairs(a) do
-				local name=minetest.get_node(no).name
-				local add=minetest.get_item_group(name,"tempsurvive_add")
-				local rad=minetest.get_item_group(name,"tempsurvive_rad")
-
-				if minetest.get_item_group(name,"tempsurvive_temp_by_meta")>0 then
-					add=add+minetest.get_meta(pos):get_int("temp")
-				end
-
-				temp=temp+tempsurvive.spread_temperature(pos,no,add,rad)
-			end
+			temp=tempsurvive.get_artificial_temperature(pos,temp)
 
 			ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*tempsurvive.speed)
 
@@ -272,7 +245,7 @@ tempsurvive.cloth_update=function(player)
 		end
 	end
 
-	if armor then
+	if tempsurvive.armor then
 		player:set_properties({
 			mesh="3d_armor_character.b3d",
 			textures={
