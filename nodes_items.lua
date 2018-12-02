@@ -156,7 +156,8 @@ minetest.register_node("tempsurvive:stove", {
 		minetest.get_node_timer(pos):start(math.abs(time))
 	end,
 	on_construct=function(pos)
-		minetest.get_node_timer(pos):start(math.random(5,10))
+
+
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 		meta:set_int("power", 0)
@@ -195,6 +196,18 @@ minetest.register_node("tempsurvive:stove", {
 		for i=1,9 do
 			minetest.add_item(pos, inv:get_stack("burning",i))
 		end
+	end,
+	on_place = function(itemstack, placer, pointed_thing)
+		if pointed_thing.type=="node" then
+			local pos=pointed_thing.above
+			pos={x=pos.x,y=pos.y+1,z=pos.z}
+			local n=minetest.registered_nodes[minetest.get_node(pos).name]
+			if minetest.is_protected(pos,placer:get_player_name())==false and n and n.buildable_to then
+				minetest.set_node({x=pos.x,y=pos.y-1,z=pos.z},{name="tempsurvive:stove"})
+				itemstack:take_item()
+			end
+		end
+		return itemstack
 	end,
 })
 
