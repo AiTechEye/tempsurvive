@@ -156,8 +156,6 @@ minetest.register_node("tempsurvive:stove", {
 		minetest.get_node_timer(pos):start(math.abs(time))
 	end,
 	on_construct=function(pos)
-
-
 		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 		meta:set_int("power", 0)
@@ -253,6 +251,7 @@ minetest.register_node("tempsurvive:keepable_fire", {
 	walkable=false,
 	sunlight_propagetes=true,
 	damage_per_secound=5,
+	floodable=true,
 	drop="",
 	on_timer = function (pos, elapsed)
 		local meta = minetest.get_meta(pos)
@@ -276,10 +275,10 @@ minetest.register_node("tempsurvive:keepable_fire", {
 		local time=minetest.get_craft_result({method="fuel", width=1, items={stack:get_name()}}).time
 		if time==0 then time=minetest.get_item_group(stack:get_name(),"flammable") end
 		if time==0 then time=minetest.get_item_group(stack:get_name(),"igniter") end
-		if time==0 and stack:get_count()>0 and meta:get_int("slot")~=slot and meta:get_int("power")>0 then
+		if time==0 and stack:get_count()>0 and meta:get_int("temp")>15 then
 			time=1
+			meta:set_int("power",meta:get_int("power")/10)
 		end
-
 
 		meta:set_int("power",meta:get_int("power")+time)
 		stack:set_count(stack:get_count()-1)
