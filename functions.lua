@@ -158,9 +158,11 @@ minetest.register_globalstep(function(dtime)
 			ptemp.temp=ptemp.temp-(math.floor(ptemp.temp-temp)*tempsurvive.speed)
 
 			if ptemp.temp<cr then
-				player:punch(player,1+math.floor((ptemp.temp-ptemp.coldness_resistance)*-0.1),{full_punch_interval=1,damage_groups={fleshy=1}})
+				--player:punch(player,1+math.floor((ptemp.temp-ptemp.coldness_resistance)*-0.1),{full_punch_interval=1,damage_groups={fleshy=1}})
+				player:set_hp(player:get_hp()-(1+math.floor((ptemp.temp-ptemp.coldness_resistance)*-0.1)))
 			elseif ptemp.temp>hr then
-				player:punch(player,1+math.floor((ptemp.temp-ptemp.heat_resistance)*0.5),{full_punch_interval=1,damage_groups={fleshy=1}})
+				--player:punch(player,1+math.floor((ptemp.temp-ptemp.heat_resistance)*0.5),{full_punch_interval=1,damage_groups={fleshy=1}})
+				player:set_hp(player:get_hp()-math.floor((ptemp.temp-ptemp.heat_resistance)*0.5))
 			end
 
 			local pt=math.floor(math.abs(ptemp.temp))
