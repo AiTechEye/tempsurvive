@@ -1,5 +1,5 @@
 # tempsurvive
-code/media license: CC0
+License: code: LGPL-2.1, media: CC BY-SA-4.0
 
 minetest temperature survive mod
 
