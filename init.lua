@@ -43,7 +43,7 @@ tempsurvive={
 dofile(minetest.get_modpath("tempsurvive") .. "/functions.lua")
 dofile(minetest.get_modpath("tempsurvive") .. "/nodes_items.lua")
 
-minetest.after(0.1, function()
+minetest.register_on_mods_loaded(function()
 	local groups_to_change={}
 	for i,v in pairs(tempsurvive.nodes) do
 		if string.find(i,":")==nil then
