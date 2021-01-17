@@ -1,6 +1,8 @@
 # tempsurvive
 License: code: LGPL-2.1, media: CC BY-SA-4.0
 
+## Compatible for minetest 4 - 5
+
 minetest temperature survive mod
 
 privilege **no_temperature** let you ignore temperatures (relogin to take effect)
