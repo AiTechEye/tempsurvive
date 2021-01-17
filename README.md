@@ -1,7 +1,8 @@
 # tempsurvive
-License: code: LGPL-2.1, media: CC BY-SA-4.0
-
 ## Compatible for minetest 4 - 5
+## License: code: LGPL-2.1, media: CC BY-SA-4.0
+
+
 
 minetest temperature survive mod
 
