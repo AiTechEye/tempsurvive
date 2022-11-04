@@ -1,0 +1,17 @@
+# textdomain: tempsurvive
+Warming=
+Cooling=
+Cloth=
+Fire=
+Cold Fire=
+Stove=
+Plank with Stick=
+Keepable fire=
+Clothes bag=
+Thermometer=
+Leather Gloves=
+Leather Shoes=
+Red Shirt=
+Orange Sweatshirt=
+Brown Woolhat=
+Lightblue Overall=

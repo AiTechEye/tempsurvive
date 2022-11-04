@@ -1,3 +1,5 @@
+local S = minetest.get_translator(minetest.get_current_modname())
+
 tempsurvive.new=function(player)
 	local name=player:get_player_name()
 	tempsurvive.player[name]={
@@ -237,13 +239,13 @@ tempsurvive.cloth_update=function(player)
 				table.insert(layern,clothe.layer)
 			end
 			table.insert(layer[clothe.layer .. ""],clothe.texture)
-			
+
 		end
 	end
 	table.sort(layern)
 	for i,n in ipairs(layern) do
 		for ii,t in pairs(layer[n .. ""]) do
-			textures=textures .. "^" .. t 
+			textures=textures .. "^" .. t
 		end
 	end
 
@@ -298,7 +300,7 @@ tempsurvive.register_clothe=function(name,def)
 	}
 
 	minetest.register_node(mn .. ":cloth_" .. name, {
-		description = def.description .. " Warming: " .. def.warming ..", Cooling: " .. def.cooling,
+		description = def.description .. " " .. S("Warming") .. ": " .. def.warming ..", " .. S("Cooling") .. ": " .. def.cooling,
 		stack_max=1,
 		drop="",
 		tiles={def.texture},
@@ -335,7 +337,7 @@ end
 tempsurvive.register_cloth=function(name,hex,amount,craft)
 	local itnam=minetest.get_current_modname() ..":cloth_" .. name
 	minetest.register_craftitem(itnam, {
-		description = string.upper(string.sub(name,1,1)) .. string.sub(name,2,string.len(name)) .." Cloth",
+		description = string.upper(string.sub(name,1,1)) .. string.sub(name,2,string.len(name)) .." " .. S("Cloth"),
 		inventory_image = "tempsurvive_bag.png^[colorize:#" .. hex .."^tempsurvive_cloth.png",
 		groups = {cloth=1}
 	})
