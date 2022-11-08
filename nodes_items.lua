@@ -1,3 +1,5 @@
+local S = minetest.get_translator(minetest.get_current_modname())
+
 --[[
 tempsurvive.register_clothe(name,{
 	texture="",	-- required
@@ -45,6 +47,7 @@ minetest.register_node("tempsurvive:fire", {
 			}
 		}
 	},
+	description = S("Fire"),
 	groups = {not_in_creative_inventory=1},
 	drawtype="firelike",
 	paramtype="light",
@@ -65,6 +68,7 @@ minetest.register_node("tempsurvive:cold_fire", {
 			}
 		}
 	},
+	description = S("Cold Fire"),
 	groups = {not_in_creative_inventory=1},
 	drawtype="firelike",
 	paramtype="light",
@@ -83,7 +87,7 @@ minetest.register_craft({
 })
 
 minetest.register_node("tempsurvive:stove", {
-	description = "stove",
+	description = S("Stove"),
 	groups = {cracky=3,tempsurvive_temp_by_meta=1,tempsurvive_rad=15,tempsurvive=1},
 	tiles={"tempsurvive_stove.png"},
 	drawtype="mesh",
@@ -210,7 +214,7 @@ minetest.register_node("tempsurvive:stove", {
 })
 
 minetest.register_craftitem("tempsurvive:plank_with_stick", {
-	description = "Plank with stick",
+	description = S("Plank with Stick"),
 	inventory_image = "tempsurvive_plank_with_stick.png",
 	groups = {wood=1,flammable=4},
 	on_place = function(itemstack, user, pointed_thing)
@@ -232,7 +236,7 @@ minetest.register_craft({
 })
 
 minetest.register_node("tempsurvive:keepable_fire", {
-	description = "Keepable fire",
+	description = S("Keepable fire"),
 	tiles = {
 		{
 			name="fire_basic_flame_animated.png",
@@ -335,7 +339,7 @@ minetest.register_node("tempsurvive:keepable_fire", {
 })
 
 minetest.register_node("tempsurvive:clothes_bag", {
-	description = "Clothes bag",
+	description = S("Clothes bag"),
 	tiles = {"tempsurvive_bag.png"},
 	groups = {dig_immediate=3},
 	drawtype="nodebox",
@@ -388,7 +392,7 @@ minetest.register_craft({
 })
 
 minetest.register_node("tempsurvive:thermometer", {
-	description = "Thermometer",
+	description = S("Thermometer"),
 	tiles = {"tempsurvive_thermometer.png"},
 	inventory_image="tempsurvive_thermometer_item.png",
 	wield_image="tempsurvive_thermometer_item.png",
@@ -434,7 +438,7 @@ minetest.register_craft({
 })
 
 tempsurvive.register_clothe("leather_gloves",{
-	description="Leather Gloves",
+	description=S("Leather Gloves"),
 	texture="tempsurvive_gloves.png",
 	part="arm",
 	layer=9,
@@ -445,7 +449,7 @@ tempsurvive.register_clothe("leather_gloves",{
 	},
 })
 tempsurvive.register_clothe("leather_shoes",{
-	description="Leather Shoes",
+	description=S("Leather Shoes"),
 	texture="tempsurvive_shoes.png",
 	part="leg",
 	layer=9,
@@ -456,7 +460,7 @@ tempsurvive.register_clothe("leather_shoes",{
 	},
 })
 tempsurvive.register_clothe("shirt",{
-	description="Red Shirt",
+	description=S("Red Shirt"),
 	texture="tempsurvive_shirt.png",
 	part="chested",
 	layer=1,
@@ -468,7 +472,7 @@ tempsurvive.register_clothe("shirt",{
 	},
 })
 tempsurvive.register_clothe("sweatshirt",{
-	description="Orange Sweatshirt",
+	description=S("Orange Sweatshirt"),
 	texture="tempsurvive_sweatshirt.png",
 	part="chested",
 	layer=2,
@@ -480,7 +484,7 @@ tempsurvive.register_clothe("sweatshirt",{
 })
 
 tempsurvive.register_clothe("brown_woolhat",{
-	description="Brown Woolhat",
+	description=S("Brown Woolhat"),
 	texture="tempsurvive_brownwollhat.png",
 	part="head",
 	layer=2,
@@ -491,7 +495,7 @@ tempsurvive.register_clothe("brown_woolhat",{
 })
 
 tempsurvive.register_clothe("lightblue_overall",{
-	description="Lightblue Overall",
+	description=S("Lightblue Overall"),
 	texture="tempsurvive_lightblueoverall.png",
 	part="body",
 	warming=10,
